@@ -7,5 +7,3 @@ COPY src ./src
 RUN ./mvnw clean package -DskipTests
 EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "target/*.jar"]
-```
-
