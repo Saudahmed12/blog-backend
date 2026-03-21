@@ -1,9 +1,33 @@
-FROM eclipse-temurin:17-jdk-alpine
+# ---------- Build stage ----------
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+
+# Set workdir
 WORKDIR /app
-COPY .mvn/ .mvn
+
+# Copy Maven wrapper & pom first (better layer caching)
 COPY mvnw pom.xml ./
-RUN ./mvnw dependency:go-offline
-COPY src ./src
+COPY .mvn .mvn
+
+# Make mvnw executable (important on Linux/Render)
+RUN chmod +x mvnw
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source
+COPY src src
+
+# Build jar
 RUN ./mvnw clean package -DskipTests
-EXPOSE 8081
-ENTRYPOINT ["java", "-jar", "target/*.jar"]
+
+# ---------- Runtime stage ----------
+FROM eclipse-temurin:21-jre
+
+WORKDIR /app
+
+# Copy built jar from build stage
+COPY --from=build /app/target/*.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java","-jar","app.jar"]
